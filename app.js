@@ -13,6 +13,7 @@ const cors = require('cors');
 const { config, validateConfig } = require('./config/env');
 const logger = require('./utils/logger');
 const telegramBot = require('./services/telegram-bot');
+const scheduler = require('./services/scheduler');
 
 class UserSyncApp {
   constructor() {
@@ -185,6 +186,10 @@ class UserSyncApp {
           logger.info(`ℹ️ Telegram bot is not configured`);
           logger.info(`   Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env to enable`);
         }
+
+        // Инициализация планировщика автоматической синхронизации
+        console.log('-'.repeat(60));
+        scheduler.initScheduler();
 
         console.log('-'.repeat(60));
         logger.success('✨ Server is ready!');

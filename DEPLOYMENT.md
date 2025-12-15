@@ -42,7 +42,7 @@ WORKSECTION_DOMAIN=ваша-компания.worksection.com
 WORKSECTION_HASH=ваш_api_hash
 
 # Порт
-PORT=3002
+PORT=3000
 
 # Telegram уведомления
 TELEGRAM_BOT_TOKEN=ваш_токен_бота
@@ -70,7 +70,7 @@ docker compose ps
 docker compose logs -f
 
 # Проверить работу API
-curl http://localhost:3002/api/health
+curl http://localhost:3000/api/health
 ```
 
 ---
@@ -199,7 +199,7 @@ server {
     server_name ws-users-to-work.eneca.work;
 
     location / {
-        proxy_pass http://localhost:3002;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

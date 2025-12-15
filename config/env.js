@@ -7,8 +7,8 @@
 require('dotenv').config();
 
 const config = {
-  // Порт сервера (по умолчанию: 3002)
-  port: process.env.PORT || 3002,
+  // Порт сервера (по умолчанию: 3000)
+  port: process.env.PORT || 3000,
 
   // Supabase конфигурация
   supabase: {

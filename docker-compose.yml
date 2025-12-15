@@ -6,7 +6,7 @@ services:
     container_name: ws-users-to-work
     restart: unless-stopped
 
-    # Порт 3002 (как в config/env.js)
+    # Порт 3000 (как в config/env.js)
     ports:
       - "3000:3000"
 
@@ -16,7 +16,7 @@ services:
 
     # Health check для мониторинга
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -4,7 +4,7 @@ services:
   ws-users-sync:
     build: .
     container_name: ws-users-to-work
-    restart: unless-stopped
+    restart: always
 
     # Порт 3000 (как в config/env.js)
     ports:

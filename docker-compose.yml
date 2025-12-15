@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  ws-users-sync:
+    build: .
+    container_name: ws-users-to-work
+    restart: unless-stopped
+
+    # Порт 3002 (как в config/env.js)
+    ports:
+      - "3002:3002"
+
+    # Подключаем .env файл с секретами
+    env_file:
+      - .env
+
+    # Health check для мониторинга
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

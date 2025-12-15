@@ -36,7 +36,7 @@ module.exports = {
   // Настройки синхронизации
   sync: {
     // Режим dry-run: true - только показать что будет сделано, false - реально выполнить
-    dryRun: true,
+    dryRun: false,
 
     // Размер пакета для batch-операций
     batchSize: 10,

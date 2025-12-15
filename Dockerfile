@@ -1,6 +1,12 @@
 # Используем легкий Node.js 18
 FROM node:18-alpine
 
+# Устанавливаем tzdata для поддержки часовых поясов
+RUN apk add --no-cache tzdata
+
+# Устанавливаем часовой пояс Минск
+ENV TZ=Europe/Minsk
+
 # Создаем рабочую директорию
 WORKDIR /app
 

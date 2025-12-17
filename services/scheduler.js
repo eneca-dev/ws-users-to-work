@@ -10,7 +10,7 @@ const logger = require('../utils/logger');
 const syncManager = require('../sync/sync-manager');
 
 // Расписание синхронизации (часы по времени Минска)
-const SYNC_HOURS = [8, 11, 14, 17, 18];
+const SYNC_HOURS = [8, 11, 14, 17];
 const TIMEZONE = 'Europe/Minsk';
 
 /**

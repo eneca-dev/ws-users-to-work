@@ -14,6 +14,18 @@ const SYNC_HOURS = [8, 11, 14, 17];
 const TIMEZONE = 'Europe/Minsk';
 
 /**
+ * Проверяет, является ли сегодня выходным днём (суббота или воскресенье)
+ * @returns {boolean} true если выходной
+ */
+function isWeekend() {
+  const now = new Date();
+  // Получаем день недели в таймзоне Минска
+  const dayOfWeek = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE })).getDay();
+  // 0 = воскресенье, 6 = суббота
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
+/**
  * Выполняет запланированную синхронизацию
  */
 async function runScheduledSync() {
@@ -25,6 +37,12 @@ async function runScheduledSync() {
     month: '2-digit',
     year: 'numeric'
   });
+
+  // Пропускаем синхронизацию по выходным
+  if (isWeekend()) {
+    logger.info(`📅 ${now} — выходной день, синхронизация пропущена`);
+    return;
+  }
 
   logger.info(`⏰ Запуск автоматической синхронизации в ${now}`);
 

@@ -1,6 +1,7 @@
 const { loadReferenceData } = require('./sync-helpers');
 const { createUsers } = require('./user-create');
 const { softDeleteUsers } = require('./user-delete');
+const { updateUserRates } = require('./user-update');
 const { compareUsers } = require('../scripts/compare-users');
 const syncConfig = require('../config/sync-config');
 const logger = require('../utils/logger');
@@ -71,19 +72,22 @@ async function syncUsers(sendNotifications = false) {
     users: {
       created: 0,
       deleted: 0,
-      updated: 0, // Только логирование
+      updated: 0, // Только логирование расхождений отделов
+      rateUpdates: 0, // Обновлённые ставки
       unchanged: 0,
       errors: 0
     },
     details: {
       created: [],
       deleted: [],
-      updated: [], // Только для логов
+      updated: [], // Только для логов расхождений отделов
+      rateUpdates: [], // Обновлённые ставки
       errors: []
     },
     // Детализированная статистика для Telegram CSV
     deletedUsers: [],      // Кто перенесён в "Удалённые"
     createdUsers: [],      // Кто добавлен и в какой отдел
+    rateUpdatedUsers: [],  // У кого обновлена ставка
     departmentMismatches: [] // У кого не совпадает отдел
   };
 
@@ -97,18 +101,18 @@ async function syncUsers(sendNotifications = false) {
     }
 
     // ШАГ 1: Загрузка reference данных
-    console.log('\n📥 ШАГ 1/5: Загрузка reference данных из базы...\n');
+    console.log('\n📥 ШАГ 1/6: Загрузка reference данных из базы...\n');
     const refData = await loadReferenceData();
 
     // ШАГ 2: Сравнение пользователей
-    console.log('\n🔍 ШАГ 2/5: Сравнение пользователей WS vs Supabase...\n');
+    console.log('\n🔍 ШАГ 2/6: Сравнение пользователей WS vs Supabase...\n');
     const compareStats = await compareUsers();
 
     // Сохраняем статистику по отделам для отчета
     finalStats.departmentStats = compareStats.by_department;
 
     // ШАГ 3: CREATE - создание новых пользователей
-    console.log('\n📝 ШАГ 3/5: Создание новых пользователей...\n');
+    console.log('\n📝 ШАГ 3/6: Создание новых пользователей...\n');
 
     // Фильтруем пользователей из отдела "Декрет" - они только для статистики
     const usersToCreate = compareStats.missing_in_supabase.filter(user => user.department !== 'Декрет');
@@ -160,8 +164,32 @@ async function syncUsers(sendNotifications = false) {
       logger.info('✅ Нет пользователей для создания');
     }
 
-    // ШАГ 4: UPDATE - ТОЛЬКО логирование расхождений
-    console.log('\n🔄 ШАГ 4/5: Проверка расхождений в отделах (UPDATE)...\n');
+    // ШАГ 4: UPDATE RATES - обновление ставок
+    console.log('\n💰 ШАГ 4/6: Обновление ставок пользователей...\n');
+
+    if (compareStats.rate_differences && compareStats.rate_differences.length > 0) {
+      const rateUpdateResult = await updateUserRates(compareStats.rate_differences);
+      finalStats.users.rateUpdates = rateUpdateResult.updated;
+      finalStats.users.errors += rateUpdateResult.errors;
+      finalStats.details.rateUpdates = rateUpdateResult.details;
+
+      // Собираем детализированную статистику для Telegram
+      rateUpdateResult.details
+        .filter(d => d.status === 'updated' || d.status === 'dry_run')
+        .forEach(user => {
+          finalStats.rateUpdatedUsers.push({
+            email: user.email,
+            name: user.name,
+            old_salary: user.old_salary,
+            new_salary: user.new_salary
+          });
+        });
+    } else {
+      logger.info('✅ Нет расхождений в ставках для обновления');
+    }
+
+    // ШАГ 5: UPDATE - ТОЛЬКО логирование расхождений отделов
+    console.log('\n🔄 ШАГ 5/6: Проверка расхождений в отделах (UPDATE)...\n');
 
     let totalDifferences = 0;
     for (const dept in compareStats.by_department) {
@@ -214,8 +242,8 @@ async function syncUsers(sendNotifications = false) {
       logger.success('✅ Расхождений в отделах не обнаружено');
     }
 
-    // ШАГ 5: DELETE - мягкое удаление
-    console.log('\n🗑️  ШАГ 5/5: Мягкое удаление пользователей (перемещение в "Удалены")...\n');
+    // ШАГ 6: DELETE - мягкое удаление
+    console.log('\n🗑️  ШАГ 6/6: Мягкое удаление пользователей (перемещение в "Удалены")...\n');
 
     // Фильтруем пользователей из отдела "Декрет" - они только для статистики
     const usersToDelete = compareStats.deleted_from_ws.filter(user => user.departmentName !== 'Декрет');
@@ -264,10 +292,12 @@ async function syncUsers(sendNotifications = false) {
       const telegramStats = {
         usersCreated: finalStats.users.created,
         usersDeleted: finalStats.users.deleted,
+        rateUpdates: finalStats.users.rateUpdates,
         departmentChanges: finalStats.users.updated,
         errors: finalStats.users.errors,
         deletedUsers: finalStats.deletedUsers,
         createdUsers: finalStats.createdUsers,
+        rateUpdatedUsers: finalStats.rateUpdatedUsers,
         departmentMismatches: finalStats.departmentMismatches,
         departmentStats: finalStats.departmentStats,
         countBefore,
@@ -310,6 +340,7 @@ function printFinalReport(stats) {
 
   console.log('\n📈 Статистика:');
   console.log(`   ✅ Создано: ${stats.users.created}`);
+  console.log(`   💰 Обновлено ставок: ${stats.users.rateUpdates}`);
   console.log(`   🗑️  Удалено (перемещено): ${stats.users.deleted}`);
   console.log(`   🔄 Расхождений в отделах: ${stats.users.updated} (ТОЛЬКО ЛОГИ)`);
   console.log(`   ➖ Без изменений: ${stats.users.unchanged}`);

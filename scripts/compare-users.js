@@ -36,6 +36,7 @@ async function compareUsers() {
       matched: 0,
       missing_in_supabase: [],
       deleted_from_ws: [],
+      rate_differences: [], // Расхождения в ставках
       by_department: {} // Статистика по каждому отделу
     };
 
@@ -103,12 +104,14 @@ async function compareUsers() {
 
       if (!supaUser) {
         // Пользователя нет в Supabase
+        const wsRate = wsUser.rate !== undefined && wsUser.rate !== null ? Number(wsUser.rate) : 0;
         stats.missing_in_supabase.push({
           email: wsUser.email,
           first_name: wsUser.first_name,
           last_name: wsUser.last_name,
           name: `${wsUser.first_name} ${wsUser.last_name}`,
           department: expectedDepartment,
+          rate: wsRate, // Ставка из WS
           ws_group: wsUser.group || '(нет)',
           ws_title: wsUser.title || '(нет)'
         });
@@ -131,6 +134,21 @@ async function compareUsers() {
           ws_expected: expectedDepartment,
           supa_actual: supaUser.department_name,
           ws_title: wsUser.title || '(нет)'
+        });
+      }
+
+      // Проверяем ставку (rate в WS → salary в Supabase)
+      const wsRate = wsUser.rate !== undefined && wsUser.rate !== null ? Number(wsUser.rate) : 0;
+      const supabaseSalary = supaUser.salary !== undefined && supaUser.salary !== null ? Number(supaUser.salary) : 0;
+
+      if (wsRate !== supabaseSalary) {
+        stats.rate_differences.push({
+          user_id: supaUser.user_id,
+          email: wsUser.email,
+          name: `${wsUser.first_name} ${wsUser.last_name}`,
+          ws_rate: wsRate,
+          supa_salary: supabaseSalary,
+          department: expectedDepartment
         });
       }
     }
@@ -224,6 +242,21 @@ async function compareUsers() {
 
     if (!hasAnyIssues) {
       console.log('\n✨ Все отделы в порядке! Нет расхождений.');
+    }
+
+    // 7. Статистика по расхождениям ставок
+    console.log('\n' + '='.repeat(80));
+    console.log('💰 РАСХОЖДЕНИЯ В СТАВКАХ (rate → salary)');
+    console.log('='.repeat(80));
+
+    if (stats.rate_differences.length > 0) {
+      console.log(`\n⚠️  Найдено расхождений: ${stats.rate_differences.length}`);
+      stats.rate_differences.forEach(diff => {
+        console.log(`   - ${diff.email} | ${diff.name}`);
+        console.log(`     WS rate: ${diff.ws_rate} → Supabase salary: ${diff.supa_salary}`);
+      });
+    } else {
+      console.log('\n✅ Расхождений в ставках нет');
     }
 
     console.log('\n' + '='.repeat(80));

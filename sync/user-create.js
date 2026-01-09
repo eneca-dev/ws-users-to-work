@@ -44,12 +44,16 @@ function validateUser(user, refData) {
  * @param {string} wsUser.email - Email
  * @param {string} wsUser.first_name - Имя
  * @param {string} wsUser.last_name - Фамилия
+ * @param {number} wsUser.rate - Ставка из WS (опционально)
  * @param {string} departmentName - Название отдела в Supabase
  * @param {Object} refData - Reference данные из базы
  * @returns {Object} { success: boolean, userId: string|null, error: string|null }
  */
 async function createUser(wsUser, departmentName, refData) {
   const supabase = createAdminClient();
+
+  // Получаем ставку из WS или используем дефолт 0
+  const salary = wsUser.rate !== undefined && wsUser.rate !== null ? Number(wsUser.rate) : 0;
 
   // Формируем user_metadata
   const userMetadata = {
@@ -62,7 +66,7 @@ async function createUser(wsUser, departmentName, refData) {
     category_id: refData.defaults.categoryId,
     work_format: syncConfig.defaults.workFormat,
     employment_rate: syncConfig.defaults.employmentRate,
-    salary: syncConfig.defaults.salary,
+    salary: salary, // Ставка из WS
     is_hourly: syncConfig.defaults.isHourly
   };
 
@@ -102,7 +106,7 @@ async function createUser(wsUser, departmentName, refData) {
           category_id: refData.defaults.categoryId,
           work_format: syncConfig.defaults.workFormat,
           employment_rate: syncConfig.defaults.employmentRate,
-          salary: syncConfig.defaults.salary,
+          salary: salary, // Ставка из WS
           is_hourly: syncConfig.defaults.isHourly
         }, {
           onConflict: 'user_id'
@@ -247,7 +251,8 @@ async function createUsers(usersToCreate, refData) {
       {
         email: user.email,
         first_name: user.name.split(' ')[0] || '',
-        last_name: user.name.split(' ')[1] || ''
+        last_name: user.name.split(' ')[1] || '',
+        rate: user.rate // Ставка из WS
       },
       user.department,
       refData

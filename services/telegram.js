@@ -97,7 +97,23 @@ function generateCsvContent(logs, stats, startTime, endTime, isDryRun = false) {
   }
 
   // ====================================
-  // РАСХОЖДЕНИЯ В ОТДЕЛАХ (после добавленных)
+  // ОБНОВЛЕНЫ СТАВКИ (после добавленных)
+  // ====================================
+  if (stats.rateUpdatedUsers && stats.rateUpdatedUsers.length > 0) {
+    csv += isDryRun ? 'ПЛАНИРУЕТСЯ ОБНОВИТЬ СТАВКИ (DRY-RUN)\n' : 'ОБНОВЛЕНЫ СТАВКИ\n';
+    csv += 'Почта,Имя,Старая ставка,Новая ставка\n';
+    stats.rateUpdatedUsers.forEach(user => {
+      const email = (user.email || '').replace(/"/g, '""');
+      const name = (user.name || '').replace(/"/g, '""');
+      const oldSalary = user.old_salary !== undefined ? user.old_salary : 0;
+      const newSalary = user.new_salary !== undefined ? user.new_salary : 0;
+      csv += `"${email}","${name}",${oldSalary},${newSalary}\n`;
+    });
+    csv += '\n';
+  }
+
+  // ====================================
+  // РАСХОЖДЕНИЯ В ОТДЕЛАХ (после ставок)
   // ====================================
   if (stats.departmentMismatches && stats.departmentMismatches.length > 0) {
     csv += 'РАСХОЖДЕНИЯ В ОТДЕЛАХ (таблица)\n';
@@ -178,8 +194,9 @@ function generateCsvContent(logs, stats, startTime, endTime, isDryRun = false) {
   csv += `Завершение,${formatDateTime(endTime)}\n`;
   csv += `Длительность,"${duration}s"\n`;
   csv += `Добавлено,${stats.usersCreated || 0}\n`;
+  csv += `Обновлено ставок,${stats.rateUpdates || 0}\n`;
   csv += `Удалено,${stats.usersDeleted || 0}\n`;
-  csv += `Расхождения,${stats.departmentChanges || 0}\n`;
+  csv += `Расхождения отделов,${stats.departmentChanges || 0}\n`;
   csv += `Ошибки,${stats.errors || 0}\n`;
   csv += '\n';
 
@@ -305,8 +322,9 @@ async function sendCsvFile(logs, stats, startTime, endTime) {
     let caption = `📊 <b>Синхронизация завершена${isDryRun ? ' (DRY-RUN)' : ''}</b>\n` +
       `⏱ Длительность: ${duration}s\n\n` +
       `✅ ${isDryRun ? 'Планируется создать' : 'Добавлено'}: ${stats.usersCreated || 0} пользователей\n` +
+      `💰 ${isDryRun ? 'Планируется обновить' : 'Обновлено'} ставок: ${stats.rateUpdates || 0}\n` +
       `🗑 ${isDryRun ? 'Планируется удалить' : 'Удалено'}: ${stats.usersDeleted || 0} пользователей\n` +
-      `⚠️ Расхождения: ${stats.departmentChanges || 0} пользователей\n` +
+      `⚠️ Расхождения отделов: ${stats.departmentChanges || 0} пользователей\n` +
       `❌ Ошибки: ${stats.errors || 0}`;
 
     if (isDryRun) {

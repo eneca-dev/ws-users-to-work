@@ -4,6 +4,9 @@
 			"path": "../../ws-to-work"
 		},
 		{
+			"path": "../../work-to-ws"
+		},
+		{
 			"path": ".."
 		}
 	],
